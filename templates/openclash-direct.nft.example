@@ -1,0 +1,14 @@
+# OPTIONAL EXAMPLE ONLY. Not generated or installed automatically.
+# Verify the firewall4 include context and the actual OpenClash hook priorities.
+# All addresses below are fictional. Change them in a PRIVATE deployment copy.
+
+chain t3_wg_direct_output {
+    type route hook output priority mangle + 5; policy accept;
+    udp sport 51820 counter meta mark set 0 comment "Private WireGuard outer UDP"
+}
+
+chain t3_wg_direct_prerouting {
+    type filter hook prerouting priority mangle + 5; policy accept;
+    iifname "wg_t3" ip saddr 10.77.0.2 ip daddr 192.168.50.100 tcp dport 3773 counter meta mark set 0 comment "Private T3 request"
+    ip saddr 192.168.50.100 ip daddr 10.77.0.2 tcp sport 3773 counter meta mark set 0 comment "Private T3 return"
+}
