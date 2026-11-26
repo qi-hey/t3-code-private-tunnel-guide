@@ -1,0 +1,78 @@
+#!/bin/sh
+# OPTIONAL EXAMPLE ONLY. POSIX sh compatible (BusyBox / Alpine / OpenWrt / Linux).
+# Sticky public IPv4 probe for multi-WAN / dual-PPPoE DDNS (e.g. ddns-go CMD mode).
+# Keeps returning the previously cached public IP while that dial-up line is still alive,
+# avoiding DNS flapping under load-balanced multi-WAN; switches promptly once that IP drops.
+#
+# Optional environment overrides (set privately on the target host/container):
+#   CACHE_FILE=/path/to/persistent/last-public-ip
+#   MAX_PROBES=6
+#   EXCLUDE_PREFIX=101.          # Optional extra ISP CGNAT prefix to skip
+#   IP_URLS="https://myip.ipip.net https://ddns.oray.com/checkip https://ip.3322.net"
+
+set -eu
+
+CACHE_FILE="${CACHE_FILE:-/tmp/wg-ddns-last-ip}"
+MAX_PROBES="${MAX_PROBES:-6}"
+EXCLUDE_PREFIX="${EXCLUDE_PREFIX:-}"
+IP_URLS="${IP_URLS:-https://myip.ipip.net https://ddns.oray.com/checkip https://ip.3322.net}"
+
+is_invalid_ipv4() {
+  ip="$1"
+  case "$ip" in
+    ""|0.*|10.*|127.*|169.254.*|172.1[6-9].*|172.2[0-9].*|172.3[0-1].*|192.168.*)
+      return 0
+      ;;
+    # RFC 6598 CGNAT 100.64.0.0/10 (100.64.* - 100.127.*)
+    100.6[4-9].*|100.[7-9][0-9].*|100.1[0-1][0-9].*|100.12[0-7].*)
+      return 0
+      ;;
+  esac
+  if [ -n "$EXCLUDE_PREFIX" ]; then
+    case "$ip" in
+      "${EXCLUDE_PREFIX}"*) return 0 ;;
+    esac
+  fi
+  return 1
+}
+
+probe_once() {
+  for url in $IP_URLS; do
+    ip=$(curl -4 -fsSL -m 6 "$url" 2>/dev/null | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' | head -n 1 || true)
+    if ! is_invalid_ipv4 "$ip"; then
+      printf '%s\n' "$ip"
+      return 0
+    fi
+  done
+  return 1
+}
+
+PREV=""
+if [ -f "$CACHE_FILE" ]; then
+  PREV=$(head -n 1 "$CACHE_FILE" 2>/dev/null | tr -d '\r\n' || true)
+  if is_invalid_ipv4 "$PREV"; then
+    PREV=""
+  fi
+fi
+
+FIRST=""
+i=1
+while [ "$i" -le "$MAX_PROBES" ]; do
+  IP=$(probe_once || true)
+  if [ -n "$IP" ]; then
+    [ -z "$FIRST" ] && FIRST="$IP"
+    if [ -n "$PREV" ] && [ "$IP" = "$PREV" ]; then
+      printf '%s\n' "$PREV"
+      exit 0
+    fi
+  fi
+  i=$((i + 1))
+done
+
+if [ -n "$FIRST" ]; then
+  printf '%s\n' "$FIRST" > "$CACHE_FILE"
+  printf '%s\n' "$FIRST"
+  exit 0
+fi
+
+exit 1

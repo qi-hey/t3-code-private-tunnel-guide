@@ -7,15 +7,17 @@ import { isIP } from "node:net";
 const root = fileURLToPath(new URL("..", import.meta.url));
 const allowedIpv4 = (ip) => {
   const p = ip.split(".").map(Number);
-  return ip === "0.0.0.0" || p[0] === 127 || p[0] === 10 ||
+  return ip === "0.0.0.0" || ip === "100.64.0.0" || p[0] === 127 || p[0] === 10 ||
     (p[0] === 172 && p[1] >= 16 && p[1] <= 31) ||
     (p[0] === 192 && p[1] === 168) ||
     ip.startsWith("192.0.2.") || ip.startsWith("198.51.100.") || ip.startsWith("203.0.113.");
 };
 const patterns = [
   ["access token", /\b(?:gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,})\b/],
+  ["bearer authorization token", /Authorization\s*:\s*Bearer\s+(?!<|REPLACE_|YOUR_)[A-Za-z0-9._-]{20,}/i],
   ["private key block", /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/],
   ["literal WireGuard key", /["'](?:private-key|public-key|pre-shared-key|serverPrivateKey|serverPublicKey|phonePrivateKey|phonePublicKey|presharedKey)["']\s*[:=]\s*["'][A-Za-z0-9+/]{43}=["']/],
+  ["hardware MAC address", /\b(?!00[:-]00[:-]5e[:-]00[:-]53[:-])(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b/i],
   ["personal Windows home", /[A-Za-z]:[\\/]+Users[\\/]+(?!<USER>|%USERNAME%|\$env:USERNAME)[^\\/\s"'<>]+[\\/]/i],
   ["personal Unix home", /\/(?:home|Users)\/(?!<USER>|\$USER)[A-Za-z0-9._-]+\//],
   ["session or attachment identifier", /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i],

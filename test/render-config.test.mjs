@@ -60,6 +60,38 @@ test("literal endpoint IPs receive a direct rule", () => {
   assert.equal(fragment.rules[0], "IP-CIDR,203.0.113.10/32,DIRECT,no-resolve");
 });
 
+test("DDNS hostname endpoints receive a DOMAIN direct rule", () => {
+  const input = { ...config(), endpoint: "wg.example.net" };
+  const fragment = JSON.parse(render(input)["mihomo-fragment.json"]);
+  assert.equal(fragment.proxies[0].peers[0].server, "wg.example.net");
+  assert.equal(fragment.rules[0], "DOMAIN,wg.example.net,DIRECT");
+});
+
+test("sticky DDNS template is POSIX-safe and all markdown relative links resolve", () => {
+  const repoRoot = fileURLToPath(new URL("..", import.meta.url));
+  const sticky = fs.readFileSync(path.join(repoRoot, "templates/ddns-sticky-ipv4.sh.example"), "utf8");
+  assert.ok(sticky.startsWith("#!/bin/sh"));
+  assert.ok(sticky.includes("grep -oE"));
+  assert.ok(!sticky.includes("grep -oP"));
+  assert.ok(sticky.includes("CACHE_FILE"));
+  assert.ok(sticky.includes("MAX_PROBES"));
+  const mdFiles = [
+    "README.md",
+    "AGENTS.md",
+    ...fs.readdirSync(path.join(repoRoot, "docs")).filter((f) => f.endsWith(".md")).map((f) => path.join("docs", f)),
+  ];
+  for (const rel of mdFiles) {
+    const abs = path.join(repoRoot, rel);
+    const text = fs.readFileSync(abs, "utf8");
+    for (const match of text.matchAll(/\[[^\]]+\]\(([^)#]+)(?:#[^)]+)?\)/g)) {
+      const target = match[1].trim();
+      if (/^(?:https?:|mailto:)/i.test(target)) continue;
+      const resolved = path.resolve(path.dirname(abs), target);
+      assert.ok(fs.existsSync(resolved), `Broken relative link in ${rel}: ${target}`);
+    }
+  }
+});
+
 test("changing the T3 port replaces this extension's old routed rule", () => {
   const firstConfig = config();
   const secondConfig = { ...firstConfig, t3Port: 3774 };

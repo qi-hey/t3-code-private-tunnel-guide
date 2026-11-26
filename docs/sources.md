@@ -34,6 +34,13 @@
 
 不同 FlClash 和内核版本对扩展入口、配置字段和 WireGuard 支持可能不同。应以实际运行内核的配置检查和握手测试为准。
 
+## 动态域名与网络参考
+
+- [Cloudflare DNS 代理与灰云（DNS only）说明](https://developers.cloudflare.com/dns/proxy-status/)
+- [ddns-go 官方仓库](https://github.com/jeessy2/ddns-go)
+- [RFC 1918：私有 IPv4 地址空间](https://datatracker.ietf.org/doc/html/rfc1918)
+- [RFC 6598：共享地址空间（CGNAT `100.64.0.0/10`）](https://datatracker.ietf.org/doc/html/rfc6598)
+
 ## 示例与工具
 
 - [RFC 5737：文档示例 IPv4 地址](https://www.rfc-editor.org/rfc/rfc5737)

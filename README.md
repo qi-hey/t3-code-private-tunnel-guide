@@ -41,7 +41,7 @@ flowchart LR
     T -.->|"模型请求是另一条数据路径"| A
 ```
 
-OpenWrt 直接持有公网地址时，可以省略上游端口映射。
+OpenWrt 直接持有公网地址时，可以省略上游端口映射。家庭宽带为动态 PPPoE 或多拨时，建议配合灰云 DDNS、全公网拨号口映射、粘滞防跳动探测以及路由侧 DHCP 静态绑定，避免公网或局域网 IP 变化导致失联，见 [DDNS 与多拨防跳动](docs/ddns-and-multi-wan.md)。
 
 **加密范围是手机到 OpenWrt。** 本教程的基础拓扑将家中局域网视为可信，OpenWrt 到电脑这一段使用 HTTP。需要保护该段时，另行配置 HTTPS，或将 WireGuard 终点部署到电脑。
 
@@ -67,6 +67,7 @@ T3 桌面端提供：
 | [AGENTS.md](AGENTS.md) | Agent 的执行约束和交付要求 |
 | [部署运行手册](docs/agent-runbook.md) | 从检查拓扑到验收、回退的完整流程 |
 | [T3 原生设置](docs/native-t3.md) | Windows 设置、原生端口、旧入口迁移 |
+| [DDNS 与多拨防跳动](docs/ddns-and-multi-wan.md) | 灰云动态域名、多拨映射对齐、粘滞防跳动与 DHCP 固定内网 IP |
 | [OpenClash 与分流](docs/openclash.md) | 处理策略路由、回程和可选的 mark 绕行 |
 | [隐私与事实边界](docs/privacy-and-claims.md) | 第三方指控的归属及自建方案的实际边界 |
 | [排错与验收](docs/verification.md) | 区分握手、网络可达、认证和媒体性能 |
@@ -111,7 +112,7 @@ Windows 同样使用这条命令，只需提供实际私有路径。输入文件
 - Mihomo JSON 配置片段，**不是完整订阅**。
 - 标明禁止公开上传的提示文件。
 
-生成文件包含私钥，不能提交到 GitHub。Windows 上应另外检查私有目录的 NTFS 权限；POSIX 的文件 mode 不等于 Windows ACL。
+生成文件包含私钥，不能提交到 GitHub。Windows 上应另外检查私有目录的 NTFS 权限；POSIX 的文件 mode 不等于 Windows ACL。若通过 NAS 或内网中转把 `flclash-extension.js` 传给手机，导入生效后应立即删除中转副本。
 
 生成器检查格式和地址关系，但不证明密钥对匹配、路由正确或目标软件支持所有配置项。实际握手和业务验收不可省略。
 

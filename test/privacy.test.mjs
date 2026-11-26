@@ -41,3 +41,15 @@ test("untracked private text and binary files are also inspected", (t) => {
   assert.ok(result.findings.some((item) => item.rule === "binary requires manual privacy review"));
   assert.ok(!JSON.stringify(result).includes(marker));
 });
+
+test("hardware MAC addresses and bearer tokens are caught while RFC 6598 base CIDR is allowed", (t) => {
+  const directory = repository(t);
+  fs.writeFileSync(path.join(directory, "ok.md"), "Filter CGNAT 100.64.0.0/10 and example MAC 00:00:5e:00:53:01.\n");
+  assert.equal(scanRepository(directory).findings.length, 0);
+  const sampleMac = ["aa", "bb", "cc", "dd", "ee", "ff"].join(":");
+  const sampleAuth = ["Authorization", `Bearer ${"x".repeat(28)}`].join(": ");
+  fs.writeFileSync(path.join(directory, "bad.md"), `Host ${sampleMac} with ${sampleAuth}\n`);
+  const result = scanRepository(directory);
+  assert.ok(result.findings.some((item) => item.rule === "hardware MAC address"));
+  assert.ok(result.findings.some((item) => item.rule === "bearer authorization token"));
+});
